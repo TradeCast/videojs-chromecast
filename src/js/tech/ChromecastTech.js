@@ -72,6 +72,7 @@ ChromecastTech = {
       }.bind(this));
       this.videojsPlayer.remoteTextTracks().on('change', this._onChangeTrack.bind(this));
       textTrackDisplay = this.videojsPlayer.getChild('TextTrackDisplay');
+
       if (textTrackDisplay) {
          textTrackDisplay.hide();
       }
@@ -174,7 +175,6 @@ ChromecastTech = {
       };
 
       sub.trackContentId = trackData.src;
-      sub.trackContentType = 'text/vtt';
       sub.subtype = textTrackTypes[trackData.kind];
       sub.name = trackData.language;
       sub.language = trackData.language;
@@ -279,11 +279,24 @@ ChromecastTech = {
       this._hasPlayedAnyItem = true;
       this._isMediaLoading = false;
       clearTimeout(this.playStateValidationTimeout);
-      this.playStateValidationTimeout = window.setTimeout(function() {
-         this._triggerTimeUpdateEvent();
-         this._onPlayerStateChanged();
-      }.bind(this), 1000); // magic number 1 second to validate playstate b/c race conditions
+      this.playStateValidationTimeout = window.setTimeout(this.validatePlayState.bind(this), 1000);
       this._getMediaSession().addUpdateListener(this._onMediaSessionStatusChanged.bind(this));
+   },
+
+   /**
+    * play state validation
+    * making sure everything between cast and local player are in sync
+    */
+   validatePlayState: function() {
+      var textTrackDisplay = this.videojsPlayer.getChild('TextTrackDisplay');
+
+      this._triggerTimeUpdateEvent();
+      this._onPlayerStateChanged();
+      this._onChangeTrack();
+
+      if (textTrackDisplay) {
+         textTrackDisplay.hide();
+      }
    },
 
    /**
