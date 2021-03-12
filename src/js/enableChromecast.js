@@ -44,7 +44,7 @@ function onChromecastRequested(player) {
 
 /**
  * Adds the Chromecast button to the player's control bar, if one does not already
- * exist, then starts lister the `chromecastRequested` event.
+ * exist, then starts listening for the `chromecastRequested` event
  *
  * @private
  * @param player {object} a Video.js player instance
