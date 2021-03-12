@@ -32,6 +32,7 @@ ChromecastTech = {
     */
    constructor: function(options) {
       var mediaSession,
+          textTrackDisplay,
           subclass;
 
       this._eventListeners = [];
@@ -50,7 +51,7 @@ ChromecastTech = {
       this._remotePlayer = this._chromecastSessionManager.getRemotePlayer();
       this._remotePlayerController = this._chromecastSessionManager.getRemotePlayerController();
       this._listenToPlayerControllerEvents();
-      this.on('dispose', this._removeAllEventListeners.bind(this));
+      this.on('dispose', this._onDispose.bind(this));
 
       this._hasPlayedAnyItem = false;
       this._requestTitle = options.requestTitleFn || _.noop;
@@ -70,6 +71,10 @@ ChromecastTech = {
          this.setMuted(options.muted);
       }.bind(this));
       this.videojsPlayer.remoteTextTracks().on('change', this._onChangeTrack.bind(this));
+      textTrackDisplay = this.videojsPlayer.getChild('TextTrackDisplay');
+      if (textTrackDisplay) {
+         textTrackDisplay.hide();
+      }
 
       return subclass;
    },
@@ -157,11 +162,20 @@ ChromecastTech = {
     * @param trackData
     */
    generateTrack: function(trackData, id) {
-      var sub = new chrome.cast.media.Track(id, chrome.cast.media.TrackType.TEXT);
+      var sub = new chrome.cast.media.Track(id, chrome.cast.media.TrackType.TEXT),
+          textTrackTypes;
+
+      textTrackTypes = {
+         subtitles: chrome.cast.media.TextTrackType.SUBTITLES,
+         captions: chrome.cast.media.TextTrackType.CAPTIONS,
+         descriptions: chrome.cast.media.TextTrackType.DESCRIPTIONS,
+         chapters: chrome.cast.media.TextTrackType.CHAPTERS,
+         metadata: chrome.cast.media.TextTrackType.METADATA,
+      };
 
       sub.trackContentId = trackData.src;
       sub.trackContentType = 'text/vtt';
-      sub.subtype = chrome.cast.media.TextTrackType.SUBTITLES;
+      sub.subtype = textTrackTypes[trackData.kind];
       sub.name = trackData.language;
       sub.language = trackData.language;
       return sub;
@@ -264,7 +278,11 @@ ChromecastTech = {
       this.videojsPlayer.hasStarted(true);
       this._hasPlayedAnyItem = true;
       this._isMediaLoading = false;
-      window.setTimeout(this._onPlayerStateChanged.bind(this), 1000); // magic number 1 second to validate playstate b/c race conditions
+      clearTimeout(this.playStateValidationTimeout);
+      this.playStateValidationTimeout = window.setTimeout(function() {
+         this._triggerTimeUpdateEvent();
+         this._onPlayerStateChanged();
+      }.bind(this), 1000); // magic number 1 second to validate playstate b/c race conditions
       this._getMediaSession().addUpdateListener(this._onMediaSessionStatusChanged.bind(this));
    },
 
@@ -601,6 +619,20 @@ ChromecastTech = {
       };
       target.addEventListener(type, listener.listener);
       this._eventListeners.push(listener);
+   },
+
+   /**
+    * on dispose
+    * @private
+    */
+   _onDispose: function() {
+      var textTrackDisplay = this.videojsPlayer.getChild('TextTrackDisplay');
+
+      if (textTrackDisplay) {
+         textTrackDisplay.show();
+      }
+      clearTimeout(this.playStateValidationTimeout);
+      this._removeAllEventListeners();
    },
 
    /**
