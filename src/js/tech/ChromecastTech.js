@@ -159,7 +159,7 @@ ChromecastTech = {
    },
 
    /**
-    * generate track
+    * transform trackdata in cast Track
     * @param trackData
     */
    generateTrack: function(trackData, id) {
