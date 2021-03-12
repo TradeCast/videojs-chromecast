@@ -43,7 +43,7 @@ function onChromecastRequested(player) {
 }
 
 /**
- * Adds the Chromecast bning foutton to the player's control bar, if one does not already
+ * Adds the Chromecast button to the player's control bar, if one does not already
  * exist, then starts lister the `chromecastRequested` event.
  *
  * @private
